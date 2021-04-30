@@ -2,6 +2,7 @@ numpy
 pyserial
 opencv-python
 fastapi
+uvicorn
 slowapi
 aiofiles
 python-multipart
