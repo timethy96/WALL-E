@@ -22,28 +22,6 @@
     THE SOFTWARE.
 """
 
-# Linux systems (including Raspberry Pi) require 49-teensy.rules in
-# /etc/udev/rules.d/, and gstreamer compatible with Processing's
-# video library.
-
-# To configure this program, edit the following sections:
-#
-#  1: change myMovie to open a video file of your choice    -)
-#
-#  2: edit the serialConfigure() lines in setup() for your
-#     serial device names (Mac, Linux) or COM ports (Windows)
-#
-#  3: if your LED strips have unusual color configuration,
-#     edit colorWiring().  Nearly all strips have GRB wiring,
-#     so normally you can leave this as-is.
-#
-#  4: if playing 50 or 60 Hz progressive video (or faster),
-#     edit framerate in movieEvent().
-
-#import processing.video.*
-#import processing.serial.*
-#import java.awt.Rectangle
-
 import math, time, cv2, numpy as np
 from serial import Serial
 from cv2 import cv2
@@ -52,13 +30,10 @@ movieFile = 'C:/Users/Markus/Google Drive/wall-E/Video.mp4'
 
 gamma = 1.7
 
-numPorts=0  # the number of serial ports in use
-maxPorts=24 # maximum number of serial ports
+numPorts=0
+maxPorts=24
+portNames = ["COM6","COM7"]
 
-#ledSerial = new Serial[maxPorts]     # each port's actual Serial port
-#ledArea = new Rectangle[maxPorts] # the area of the movie each port gets, in % (0-100)
-#ledLayout = new boolean[maxPorts]   # layout of rows, True = even is left->right
-#ledImage = new PImage[maxPorts]      # image sent to each port
 ledSerial = [None] * maxPorts
 ledArea = [None] * maxPorts
 ledLayout = [None] * maxPorts
@@ -74,33 +49,23 @@ class Rectangle:
     self.width = width
     self.height = height
 
-#def settings():
-#  size(480, 400)  # create the window
-
-def setup():
+def setupLED():
   global errorCount
-  #slist = Serial.list()
-  #sleepms(20)
-  #print("Serial Ports List:")
-  #print(slist)
-  serialConfigure("COM6")  # change these to your port names
-  #serialConfigure("/dev/ttyACM1")
+  for pN in portNames:
+    _serialConfigure(pN)
   if (errorCount > 0):
     exit()
   for i in range(256):
     gammatable[i] = math.pow(i / 255.0, gamma) * 255.0 + 0.5
   
   myMovie = cv2.VideoCapture(movieFile)
-  #myMovie.loop()  # start the movie :-)
-  movieEvent(myMovie)
+  _movieEvent(myMovie)
 
-def npc(x): #narrowing primitive conversion
+def _npc(x): #narrowing primitive conversion
   pnmask = 0xFF
   return x & pnmask
 
-# movieEvent runs for each new frame of movie data
-
-def movieEvent(mov):
+def _movieEvent(mov):
   global numPorts
   framerate = mov.get(cv2.CAP_PROP_FPS)
   while(mov.isOpened()):
@@ -108,48 +73,33 @@ def movieEvent(mov):
 
     if m is None:
       break
-    # read the movie's next frame
-    #m.read()
-    mwidth, mheight, d = m.shape
-
-    #if (framerate == 0) framerate = m.getSourceFrameRate()
-    #framerate = 10.0 # TODO, how to read the frame rate???
-    
+    mwidth, mheight, d = m.shape    
 
     for i in range(numPorts):
       # copy a portion of the movie's image to the LED image
-      xoffset = int(percentage(mwidth, ledArea[i].x))
-      yoffset = int(percentage(mheight, ledArea[i].y))
-      xwidth =  int(percentage(mwidth, ledArea[i].width))
-      yheight = int(percentage(mheight, ledArea[i].height))
+      xoffset = int(_percentage(mwidth, ledArea[i].x))
+      yoffset = int(_percentage(mheight, ledArea[i].y))
+      xwidth =  int(_percentage(mwidth, ledArea[i].width))
+      yheight = int(_percentage(mheight, ledArea[i].height))
       
       dim = (ledImage[i].shape[0],ledImage[i].shape[1])
       cropImg = m[xoffset:xoffset+xwidth, yoffset:yoffset+yheight]
       ledImage[i] = cv2.resize(cropImg,dim)
-      # convert the LED image to raw data
-      #byte[] ledData =  new byte[(ledImage[i].width * ledImage[i].height * 3) + 3]
-      #ledData = bytearray()
-      #ledData = bytearray((dim[0] * dim[1] * 3) + 3)
-      #ledData = bytes()
-      ledData = image2data(ledImage[i], ledLayout[i])
+      ledData = _image2data(ledImage[i], ledLayout[i])
       
       if (i == 0):
         usec = int((1000000.0 / framerate) * 0.75)
-        ledData.insert(0, npc(usec >> 8))
-        ledData.insert(0, npc(usec))
+        ledData.insert(0, _npc(usec >> 8))
+        ledData.insert(0, _npc(usec))
         ledData.insert(0, ord('*'))
       else:
         ledData[0] = bytes('%','ASCII')  # others sync to the master board
         ledData[1] = 0
         ledData[2] = 0
-
-      #print(image2data(ledImage[i], ledLayout[i]))
       
       
       # send the raw data to the LEDs  :-)
       cv2.imshow("x", cropImg)
-      #encLedData = ''.join(chr(npc(b)) for b in ledData).encode()
-      #print(ledData[0:100])
       time.sleep(framerate/690)
       ledSerial[i].write(ledData)
     if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -161,13 +111,11 @@ def movieEvent(mov):
 # image2data converts an image to OctoWS2811's raw data format.
 # The number of vertical pixels in the image must be a multiple
 # of 8.  The data array must be the proper size for the image.
-def image2data(image, layout):
-  #data=bytes()
+def _image2data(image, layout):
   data = list()
   imageheight = image.shape[0]
   imagewidth = image.shape[1]
   offset = 3
-  #x, y, xbegin, xend, xinc, mask
   linesPerPin = int(imageheight / 8)
   pixel = [None] * 8
 
@@ -193,49 +141,35 @@ def image2data(image, layout):
       for i in range(8):
         
         pixel[i] = flatimg[x + (y + linesPerPin * i) * imagewidth]
-        #print(pixel[i])
-        pixel[i] = colorWiring(pixel[i])
-        #return pixel[i]
+        pixel[i] = _colorWiring(pixel[i])
 
       # convert 8 pixels to 24 bytes
-      #for (mask = 0x800000 mask != 0 mask >>= 1):
       mask = 0x800000
       while mask != 0:
-        #mask >>= 1
         b = 0
         for i in range(8):
           if (pixel[i] & mask) != 0:
             b = b | (1 << i)
-        
         offset += 1
         data.append(b)
         mask >>= 1
-  return data
-      
-    
-  
 
+  return data
 
 # translate the 24 bit color from RGB to the actual
 # order used by the LED wiring.  GRB is the most common.
-def colorWiring(c):
-  #red = (c & 0xFF0000) >> 16
-  #red = c[0] >> 16
-  #green = (c & 0x00FF00) >> 8
-  #green = c[1] >> 8
-  #blue = (c & 0x0000FF)
+def _colorWiring(c):
   red = c[0]
   green = c[1]
   blue = c[2]
   red = int(gammatable[red])
   green = int(gammatable[green])
   blue = int(gammatable[blue])
-  return (green << 16) | (blue << 8) | (red) # GRB - most common wiring
-  #return bytearray([green,red,blue])
+  return (green << 16) | (blue << 8) | (red)
 
 
 # ask a Teensy board for its LED configuration, and set up the info for it.
-def serialConfigure(portName):
+def _serialConfigure(portName):
   global numPorts
   global errorCount
   if numPorts >= maxPorts:
@@ -251,7 +185,7 @@ def serialConfigure(portName):
     errorCount += 1
     return
   
-  sleepms(50)
+  _sleepms(50)
   line = ledSerial[numPorts].readline().strip().decode()
   if (line == None):
     print("Serial port " + portName + " is not responding.")
@@ -266,53 +200,21 @@ def serialConfigure(portName):
     return
   
   # only store the info and increase numPorts if Teensy responds properly
-  #ledImage[numPorts] = new PImage(Integer.parseInt(param[0]), Integer.parseInt(param[1]), RGB)
   ledImage[numPorts] = np.zeros((int(param[0]), int(param[1]),3), np.uint8)
   ledArea[numPorts] = Rectangle(int(param[5]), int(param[6]), int(param[7]), int(param[8]))
   ledLayout[numPorts] = int(param[5]) == 0
   numPorts += 1
 
-"""
-# draw runs every time the screen is redrawn - show the movie...
-def draw():
-  global numPorts
-  #print("draw")
-  # show the original video
-  image(myMovie, 0, 80)
-
-  # then try to show what was most recently sent to the LEDs
-  # by displaying all the images for each port.
-  for i in range(numPorts):
-    # compute the intended size of the entire LED array
-    xsize = percentageInverse(ledImage[i].width, ledArea[i].width)
-    ysize = percentageInverse(ledImage[i].height, ledArea[i].height)
-    # computer this image's position within it
-    xloc =  percentage(xsize, ledArea[i].x)
-    yloc =  percentage(ysize, ledArea[i].y)
-    # show what should appear on the LEDs
-    image(ledImage[i], 240 - xsize / 2 + xloc, 10 + yloc)
-
-# respond to mouse clicks as pause/play
-isPlaying = True
-def mousePressed():
-  if (isPlaying):
-    myMovie.pause()
-    isPlaying = False
-  else:
-    myMovie.play()
-    isPlaying = True
-"""
-
 # scale a number by a percentage, from 0 to 100
-def percentage(num, percent):
-  mult = percentageFloat(percent)
+def _percentage(num, percent):
+  mult = _percentageFloat(percent)
   output = num * mult
   return output
 
 
 # scale a number by the inverse of a percentage, from 0 to 100
-def percentageInverse(num, percent):
-  div = percentageFloat(percent)
+def _percentageInverse(num, percent):
+  div = _percentageFloat(percent)
   output = num / div
   return output
 
@@ -320,7 +222,7 @@ def percentageInverse(num, percent):
 # convert an integer from 0 to 100 to a float percentage
 # from 0.0 to 1.0.  Special cases for 1/3, 1/6, 1/7, etc
 # are handled automatically to fix integer rounding.
-def percentageFloat(percent):
+def _percentageFloat(percent):
   if (percent == 33): return 1.0 / 3.0
   if (percent == 17): return 1.0 / 6.0
   if (percent == 14): return 1.0 / 7.0
@@ -330,8 +232,8 @@ def percentageFloat(percent):
   if (percent ==  8): return 1.0 / 12.0
   return percent / 100.0
 
-def sleepms(ms):
+def _sleepms(ms):
   time.sleep(ms / 1000)
 
-
-setup()
+#run setup (main program)
+setupLED()
