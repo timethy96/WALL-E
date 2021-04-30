@@ -13,9 +13,6 @@ from starlette.requests import Request
 
 import concurrent.futures, os, math, time, aiofiles
 
-import numpy as np
-import pandas as pd
-
 from movie2serial import putQueue
 
 cwd = os.path.dirname(os.path.realpath(__file__))
