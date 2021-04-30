@@ -48,7 +48,7 @@ import math, time, cv2, numpy as np
 from serial import Serial
 from cv2 import cv2
 
-movieFile = 'Video.mp4'
+movieFile = 'C:/Users/Markus/Google Drive/wall-E/Video.mp4'
 
 gamma = 1.7
 
@@ -83,7 +83,7 @@ def setup():
   #sleepms(20)
   #print("Serial Ports List:")
   #print(slist)
-  serialConfigure("/dev/ttyACM0")  # change these to your port names
+  serialConfigure("COM6")  # change these to your port names
   #serialConfigure("/dev/ttyACM1")
   if (errorCount > 0):
     exit()
@@ -94,22 +94,27 @@ def setup():
   #myMovie.loop()  # start the movie :-)
   movieEvent(myMovie)
 
+def npc(x): #narrowing primitive conversion
+  pnmask = 0xFF
+  return x & pnmask
 
 # movieEvent runs for each new frame of movie data
 
 def movieEvent(mov):
   global numPorts
+  framerate = mov.get(cv2.CAP_PROP_FPS)
   while(mov.isOpened()):
     m = mov.read()[1]
-    print("movieEvent")
+
+    if m is None:
+      break
     # read the movie's next frame
     #m.read()
     mwidth, mheight, d = m.shape
 
-
     #if (framerate == 0) framerate = m.getSourceFrameRate()
-    #framerate = 30.0 # TODO, how to read the frame rate???
-    framerate = mov.get(cv2.CAP_PROP_FPS)
+    #framerate = 10.0 # TODO, how to read the frame rate???
+    
 
     for i in range(numPorts):
       # copy a portion of the movie's image to the LED image
@@ -123,20 +128,29 @@ def movieEvent(mov):
       ledImage[i] = cv2.resize(cropImg,dim)
       # convert the LED image to raw data
       #byte[] ledData =  new byte[(ledImage[i].width * ledImage[i].height * 3) + 3]
+      #ledData = bytearray()
       #ledData = bytearray((dim[0] * dim[1] * 3) + 3)
-      ledData = bytearray((dim[0] * dim[1] * 3) + 3)
-      image2data(ledImage[i], ledData, ledLayout[i])
+      #ledData = bytes()
+      ledData = image2data(ledImage[i], ledLayout[i])
+      
       if (i == 0):
-        ledData[0] = bytes('*','ASCII')  # first Teensy is the frame sync master
-        usec = (1000000.0 / framerate) * 0.75
-        ledData[1] = bytes(usec)   # request the frame sync pulse
-        ledData[2] = bytes(usec >> 8) # at 75% of the frame time
+        usec = int((1000000.0 / framerate) * 0.75)
+        ledData.insert(0, npc(usec >> 8))
+        ledData.insert(0, npc(usec))
+        ledData.insert(0, ord('*'))
       else:
         ledData[0] = bytes('%','ASCII')  # others sync to the master board
         ledData[1] = 0
         ledData[2] = 0
+
+      #print(image2data(ledImage[i], ledLayout[i]))
+      
       
       # send the raw data to the LEDs  :-)
+      cv2.imshow("x", cropImg)
+      #encLedData = ''.join(chr(npc(b)) for b in ledData).encode()
+      #print(ledData[0:100])
+      time.sleep(framerate/690)
       ledSerial[i].write(ledData)
     if cv2.waitKey(1) & 0xFF == ord('q'):
       break
@@ -147,13 +161,19 @@ def movieEvent(mov):
 # image2data converts an image to OctoWS2811's raw data format.
 # The number of vertical pixels in the image must be a multiple
 # of 8.  The data array must be the proper size for the image.
-def image2data(image, data, layout):
+def image2data(image, layout):
+  #data=bytes()
+  data = list()
   imageheight = image.shape[0]
   imagewidth = image.shape[1]
   offset = 3
   #x, y, xbegin, xend, xinc, mask
   linesPerPin = int(imageheight / 8)
   pixel = [None] * 8
+
+  flatimg = []
+  for imgline in image:
+    flatimg.extend(imgline)
 
   for y in range(linesPerPin):
     if layout: p = 0
@@ -171,22 +191,26 @@ def image2data(image, data, layout):
     
     for x in range(xbegin,xend,xinc):
       for i in range(8):
-        # fetch 8 pixels from the image, 1 for each pin
-        pixel[i] = image.flat[x + (y + linesPerPin * i) * imagewidth]
+        
+        pixel[i] = flatimg[x + (y + linesPerPin * i) * imagewidth]
+        #print(pixel[i])
         pixel[i] = colorWiring(pixel[i])
-      
+        #return pixel[i]
+
       # convert 8 pixels to 24 bytes
       #for (mask = 0x800000 mask != 0 mask >>= 1):
       mask = 0x800000
       while mask != 0:
+        #mask >>= 1
         b = 0
         for i in range(8):
           if (pixel[i] & mask) != 0:
             b = b | (1 << i)
         
         offset += 1
-        data += bytes(b)
+        data.append(b)
         mask >>= 1
+  return data
       
     
   
@@ -195,13 +219,19 @@ def image2data(image, data, layout):
 # translate the 24 bit color from RGB to the actual
 # order used by the LED wiring.  GRB is the most common.
 def colorWiring(c):
-  red = (c & 0xFF0000) >> 16
-  green = (c & 0x00FF00) >> 8
-  blue = (c & 0x0000FF)
+  #red = (c & 0xFF0000) >> 16
+  #red = c[0] >> 16
+  #green = (c & 0x00FF00) >> 8
+  #green = c[1] >> 8
+  #blue = (c & 0x0000FF)
+  red = c[0]
+  green = c[1]
+  blue = c[2]
   red = int(gammatable[red])
   green = int(gammatable[green])
   blue = int(gammatable[blue])
-  return (green << 16) | (red << 8) | (blue) # GRB - most common wiring
+  return (green << 16) | (blue << 8) | (red) # GRB - most common wiring
+  #return bytearray([green,red,blue])
 
 
 # ask a Teensy board for its LED configuration, and set up the info for it.
@@ -213,7 +243,7 @@ def serialConfigure(portName):
     errorCount += 1
     return
   try:
-    ledSerial[numPorts] = Serial(portName)
+    ledSerial[numPorts] = Serial(portName, write_timeout=1)
     if (ledSerial[numPorts] == None): print('NonePointerException!'); errorCount+=1; return
     ledSerial[numPorts].write(bytes('?','ASCII'))
   except Exception as e:
