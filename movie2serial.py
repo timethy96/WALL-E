@@ -22,11 +22,12 @@
     THE SOFTWARE.
 """
 
-import math, time, cv2, numpy as np
+import math, time, cv2, queue,  random, numpy as np
 from serial import Serial
 from cv2 import cv2
-
-movieFile = 'C:/Users/Markus/Google Drive/wall-E/Video.mp4'
+from threading import Thread
+from os import listdir
+from os.path import isfile, join, dirname, realpath
 
 gamma = 1.7
 
@@ -42,6 +43,12 @@ gammatable = [None] * 256
 errorCount = 0
 framerate = 0
 
+movieQueue = queue.Queue()
+
+stdMvList = []
+
+cwd = dirname(realpath(__file__))
+
 class Rectangle:
   def __init__(self,x,y,width,height):
     self.x = x
@@ -50,20 +57,40 @@ class Rectangle:
     self.height = height
 
 def setupLED():
-  global errorCount
+  global movieQueue, errorCount, stdMvList
+ 
   for pN in portNames:
     _serialConfigure(pN)
   if (errorCount > 0):
     exit()
   for i in range(256):
     gammatable[i] = math.pow(i / 255.0, gamma) * 255.0 + 0.5
-  
-  myMovie = cv2.VideoCapture(movieFile)
-  _movieEvent(myMovie)
 
-def _npc(x): #narrowing primitive conversion
-  pnmask = 0xFF
-  return x & pnmask
+  #add standard movies from folder to list
+  stdMvList.extend([cwd + "/stdMovies/" + f for f in listdir(cwd + "/stdMovies") if isfile(join(cwd + "/stdMovies", f))])
+
+  #start main queue working thread
+  worker = Thread(target=_workQueue, args=(movieQueue))
+  worker.setDaemon(True)
+  worker.start()
+
+def _workQueue(mQueue):
+  while True:
+    if mQueue.empty():
+      mQueue.put(randomMovie())
+    mov = mQueue.get()
+    _movieEvent(mov)
+    movieQueue.task_done()
+    _sleepms(50)
+
+def putQueue(movPath):
+  global movieQueue
+  movieQueue.put(movPath)
+
+def randomMovie():
+  global stdMvList
+  rN = random.randrange(0,len(stdMvList))
+  return stdMvList[rN]
 
 def _movieEvent(mov):
   global numPorts
@@ -155,6 +182,10 @@ def _image2data(image, layout):
         mask >>= 1
 
   return data
+
+def _npc(x): #narrowing primitive conversion
+  pnmask = 0xFF
+  return x & pnmask
 
 # translate the 24 bit color from RGB to the actual
 # order used by the LED wiring.  GRB is the most common.
