@@ -1,0 +1,7 @@
+numpy
+pyserial
+opencv-python
+fastapi
+slowapi
+aiofiles
+python-multipart

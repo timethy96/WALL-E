@@ -22,7 +22,7 @@
     THE SOFTWARE.
 """
 
-import math, time, cv2, queue,  random, numpy as np
+import math, time, queue, random, numpy as np
 from serial import Serial
 from cv2 import cv2
 from threading import Thread
@@ -33,7 +33,7 @@ gamma = 1.7
 
 numPorts=0
 maxPorts=24
-portNames = ["COM6","COM7"]
+portNames = ["COM3",]
 
 ledSerial = [None] * maxPorts
 ledArea = [None] * maxPorts
@@ -70,15 +70,15 @@ def setupLED():
   stdMvList.extend([cwd + "/stdMovies/" + f for f in listdir(cwd + "/stdMovies") if isfile(join(cwd + "/stdMovies", f))])
 
   #start main queue working thread
-  worker = Thread(target=_workQueue, args=(movieQueue))
-  worker.setDaemon(True)
+  worker = Thread(target=_workQueue, args=([movieQueue,]))
+  #worker.setDaemon(True)
   worker.start()
 
 def _workQueue(mQueue):
   while True:
     if mQueue.empty():
       mQueue.put(randomMovie())
-    mov = mQueue.get()
+    mov = cv2.VideoCapture(mQueue.get())
     _movieEvent(mov)
     movieQueue.task_done()
     _sleepms(50)
@@ -92,9 +92,10 @@ def randomMovie():
   rN = random.randrange(0,len(stdMvList))
   return stdMvList[rN]
 
+
 def _movieEvent(mov):
   global numPorts
-  framerate = mov.get(cv2.CAP_PROP_FPS)
+  framerate = 25 #mov.get(cv2.CAP_PROP_FPS)
   while(mov.isOpened()):
     m = mov.read()[1]
 
@@ -126,8 +127,9 @@ def _movieEvent(mov):
       
       
       # send the raw data to the LEDs  :-)
-      cv2.imshow("x", cropImg)
-      time.sleep(framerate/690)
+      #time.sleep(framerate/690)
+      _sleepms(40)
+      #cv2.imshow("x", cropImg)
       ledSerial[i].write(ledData)
     if cv2.waitKey(1) & 0xFF == ord('q'):
       break
