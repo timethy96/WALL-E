@@ -24,16 +24,19 @@
 
 import math, time, queue, random, numpy as np
 from serial import Serial
+import serial.tools.list_ports
 from cv2 import cv2
 from threading import Thread
-from os import listdir
+from os import listdir, environ
 from os.path import isfile, join, dirname, realpath
 
 gamma = 1.7
 
 numPorts=0
 maxPorts=24
-portNames = ["COM3",]
+
+portNames = environ['ports'].split(',')
+
 
 ledSerial = [None] * maxPorts
 ledArea = [None] * maxPorts
@@ -58,7 +61,12 @@ class Rectangle:
 
 def setupLED():
   global movieQueue, errorCount, stdMvList
- 
+
+  #list available ports
+  ports = serial.tools.list_ports.comports()
+  for port, desc, hwid in sorted(ports):
+    print("{}: {} [{}]".format(port, desc, hwid))
+  
   for pN in portNames:
     _serialConfigure(pN)
   if (errorCount > 0):
