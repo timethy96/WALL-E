@@ -11,11 +11,14 @@ from pydantic import BaseModel
 
 from starlette.requests import Request
 
-import concurrent.futures, os, math, time, aiofiles
+import concurrent.futures, os, math, time, aiofiles, sys
 
-from movie2serial import putQueue
 
 cwd = os.path.dirname(os.path.realpath(__file__))
+
+sys.path.append(cwd)
+
+import movie2serial
 
 app = FastAPI()
 limiter = Limiter(key_func=get_remote_address)
@@ -44,14 +47,16 @@ def read_root():
 @app.post("/")
 @limiter.limit("30/minute")
 async def post_endpoint(in_file: UploadFile=File(...), request: Request=Request):
-    if os.path.isfile(cwd + "/stdMovies/" + in_file.filename):
-        out_file_path = cwd + "/stdMovies/" + in_file.filename + time.time_ns()
+    if os.path.isfile(cwd + "/qMovies/" + in_file.filename):
+        fName = in_file.filename.split(".")[0:-1]
+        fExt = in_file.filename.split(".")[-1]
+        out_file_path = cwd + "/qMovies/" + fName + str(time.time_ns()) + fExt
     else:
-        out_file_path = cwd + "/stdMovies/" + in_file.filename
+        out_file_path = cwd + "/qMovies/" + in_file.filename
     async with aiofiles.open(out_file_path, 'wb') as out_file:
         while content := await in_file.read(1024):
             await out_file.write(content)  # async write chunk
 
-    putQueue(out_file_path)
+    movie2serial.putQueue(out_file_path)
 
     return {"Result": "OK, queued!"}

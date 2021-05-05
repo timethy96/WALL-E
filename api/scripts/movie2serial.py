@@ -25,9 +25,10 @@
 import math, time, queue, random, numpy as np
 from serial import Serial
 import serial.tools.list_ports
-from cv2 import cv2
+#from cv2 import cv2
+import cv2
 from threading import Thread
-from os import listdir, environ
+from os import listdir, environ, remove
 from os.path import isfile, join, dirname, realpath
 
 gamma = 1.7
@@ -66,6 +67,8 @@ def setupLED():
   ports = serial.tools.list_ports.comports()
   for port, desc, hwid in sorted(ports):
     print("{}: {} [{}]".format(port, desc, hwid))
+  if ports is None or ports is "":
+    print("No ports found")
   
   for pN in portNames:
     _serialConfigure(pN)
@@ -86,8 +89,10 @@ def _workQueue(mQueue):
   while True:
     if mQueue.empty():
       mQueue.put(randomMovie())
-    mov = cv2.VideoCapture(mQueue.get())
+    movPath = mQueue.get()
+    mov = cv2.VideoCapture(movPath)
     _movieEvent(mov)
+    remove(movPath)
     movieQueue.task_done()
     _sleepms(50)
 
@@ -135,12 +140,12 @@ def _movieEvent(mov):
       
       
       # send the raw data to the LEDs  :-)
-      #time.sleep(framerate/690)
-      _sleepms(40)
+      time.sleep(1/framerate)
+      #_sleepms(40)
       #cv2.imshow("x", cropImg)
       ledSerial[i].write(ledData)
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-      break
+    #if cv2.waitKey(1) & 0xFF == ord('q'):
+      #break
   mov.release()
   
 

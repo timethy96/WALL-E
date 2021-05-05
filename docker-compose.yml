@@ -1,16 +1,12 @@
 version: '2'
-
-volumes:
-    api:
   
 services:
   
     wall-e_api:
         build: ./api
-        expose:
-            - 80
-        volumes:
-            - api:/app
+        privileged: true
+        ports:
+            - 80:80
         environment:
             GUNICORN_CMD_ARGS: --reload
         restart: unless-stopped
