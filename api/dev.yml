@@ -1,0 +1,12 @@
+version: '2'
+  
+services:
+  
+    wall-e_api:
+        build: .
+        privileged: true
+        ports:
+            - 8081:80
+        environment:
+            GUNICORN_CMD_ARGS: --reloads
+        restart: "no"

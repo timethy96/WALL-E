@@ -3,7 +3,7 @@ version: '2'
 services:
   
     wall-e_api:
-        build: ./api
+        build: .
         privileged: true
         ports:
             - 80:80

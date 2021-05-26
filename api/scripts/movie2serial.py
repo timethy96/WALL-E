@@ -22,14 +22,12 @@
     THE SOFTWARE.
 """
 
-import math, time, queue, random, numpy as np
+import math, time, numpy as np
 from serial import Serial
 import serial.tools.list_ports
 #from cv2 import cv2
 import cv2
-from threading import Thread
-from os import listdir, environ, remove
-from os.path import isfile, join, dirname, realpath
+from os import environ
 
 gamma = 1.7
 
@@ -47,11 +45,7 @@ gammatable = [None] * 256
 errorCount = 0
 framerate = 0
 
-movieQueue = queue.Queue()
 
-stdMvList = []
-
-cwd = dirname(realpath(__file__))
 
 class Rectangle:
   def __init__(self,x,y,width,height):
@@ -61,7 +55,7 @@ class Rectangle:
     self.height = height
 
 def setupLED():
-  global movieQueue, errorCount, stdMvList
+  global errorCount
 
   #list available ports
   ports = serial.tools.list_ports.comports()
@@ -77,40 +71,30 @@ def setupLED():
   for i in range(256):
     gammatable[i] = math.pow(i / 255.0, gamma) * 255.0 + 0.5
 
-  #add standard movies from folder to list
-  stdMvList.extend([cwd + "/stdMovies/" + f for f in listdir(cwd + "/stdMovies") if isfile(join(cwd + "/stdMovies", f))])
+ 
 
-  #start main queue working thread
-  worker = Thread(target=_workQueue, args=([movieQueue,]))
-  #worker.setDaemon(True)
-  worker.start()
-
-def _workQueue(mQueue):
-  while True:
-    if mQueue.empty():
-      mQueue.put(randomMovie())
-    movPath = mQueue.get()
-    mov = cv2.VideoCapture(movPath)
-    _movieEvent(mov)
-    remove(movPath)
-    movieQueue.task_done()
-    _sleepms(50)
-
-def putQueue(movPath):
-  global movieQueue
-  movieQueue.put(movPath)
-
-def randomMovie():
-  global stdMvList
-  rN = random.randrange(0,len(stdMvList))
-  return stdMvList[rN]
-
-
-def _movieEvent(mov):
+def movieEvent(movPath):
   global numPorts
-  framerate = 25 #mov.get(cv2.CAP_PROP_FPS)
+  mov = cv2.VideoCapture(movPath)
+  framerate = 25 
+  framerateActual = mov.get(cv2.CAP_PROP_FPS)
+  if framerate != framerateActual:
+    framedrop = math.ceil(framerateActual / (framerateActual - framerate))
+    if framedrop < 0:
+      framerate = framerateActual
+  else:
+    framedrop = 0
+  curFrame = 0
   while(mov.isOpened()):
+    startTime = time.time_ns()
+
     m = mov.read()[1]
+
+    curFrame += 1
+
+    if framedrop > 0 and (curFrame % framedrop) == 0:
+      continue
+    
 
     if m is None:
       break
@@ -130,17 +114,21 @@ def _movieEvent(mov):
       
       if (i == 0):
         usec = int((1000000.0 / framerate) * 0.75)
+        #ledData.insert(0, _npc(usec >> 8))
+        #ledData.insert(0, _npc(usec))
         ledData.insert(0, _npc(usec >> 8))
         ledData.insert(0, _npc(usec))
         ledData.insert(0, ord('*'))
       else:
-        ledData[0] = bytes('%','ASCII')  # others sync to the master board
-        ledData[1] = 0
-        ledData[2] = 0
+        ledData.insert(0, 0)
+        ledData.insert(0, 0)
+        ledData.insert(0, ord('%'))
       
       
       # send the raw data to the LEDs  :-)
-      time.sleep(1/framerate)
+
+      deltaTimeS = (time.time_ns() - startTime) / 10**9
+      time.sleep(1/framerate - deltaTimeS)
       #_sleepms(40)
       #cv2.imshow("x", cropImg)
       ledSerial[i].write(ledData)
@@ -212,6 +200,8 @@ def _colorWiring(c):
   green = int(gammatable[green])
   blue = int(gammatable[blue])
   return (green << 16) | (blue << 8) | (red)
+
+  # FF0011 FF1100
 
 
 # ask a Teensy board for its LED configuration, and set up the info for it.

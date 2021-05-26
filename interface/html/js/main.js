@@ -1,0 +1,12 @@
+$("#bImgUl").click(function(){
+    $(".ul").slideUp();
+    $("#imgUl").slideDown();
+});
+$("#bDrawUl").click(function(){
+    $(".ul").slideUp();
+    $("#drawUl").slideDown();
+});
+$("#bVidUl").click(function(){
+    $(".ul").slideUp();
+    $("#vidUl").slideDown();
+});
