@@ -47,7 +47,7 @@ class data(BaseModel):
 def read_root():
     return r"For api description please consult the <a href='/docs'>docs</a>"
 
-s
+
 @app.post("/")
 @limiter.limit("30/minute")
 async def upload_post(in_file: UploadFile=File(...), length: str=Form(...), recurring: str=Form(...), time: str=Form(...), request: Request=Request):
