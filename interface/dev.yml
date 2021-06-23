@@ -9,5 +9,5 @@ services:
         volumes:
             - ./html:/var/www/html
         environment:
-            - APIURL=http://api.localhost
+            - APIURL=https://8b30755028eb3126a5ec52785b2826b4.balena-devices.com
         restart: "no"

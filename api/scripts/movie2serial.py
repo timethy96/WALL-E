@@ -26,7 +26,7 @@ import math, time, numpy as np
 from serial import Serial
 import serial.tools.list_ports
 #from cv2 import cv2
-import cv2
+from cv2 import cv2
 from os import environ
 
 gamma = 1.7
@@ -61,7 +61,7 @@ def setupLED():
   ports = serial.tools.list_ports.comports()
   for port, desc, hwid in sorted(ports):
     print("{}: {} [{}]".format(port, desc, hwid))
-  if ports is None or ports is "":
+  if ports is None or ports == "":
     print("No ports found")
   
   for pN in portNames:
@@ -76,7 +76,7 @@ def setupLED():
 def movieEvent(movPath):
   global numPorts
   mov = cv2.VideoCapture(movPath)
-  framerate = 25 
+  framerate = 25
   framerateActual = mov.get(cv2.CAP_PROP_FPS)
   if framerate != framerateActual:
     framedrop = math.ceil(framerateActual / (framerateActual - framerate))
@@ -114,8 +114,6 @@ def movieEvent(movPath):
       
       if (i == 0):
         usec = int((1000000.0 / framerate) * 0.75)
-        #ledData.insert(0, _npc(usec >> 8))
-        #ledData.insert(0, _npc(usec))
         ledData.insert(0, _npc(usec >> 8))
         ledData.insert(0, _npc(usec))
         ledData.insert(0, ord('*'))
@@ -128,10 +126,15 @@ def movieEvent(movPath):
       # send the raw data to the LEDs  :-)
 
       deltaTimeS = (time.time_ns() - startTime) / 10**9
-      time.sleep(1/framerate - deltaTimeS)
+      sleepytime = 1/framerate - deltaTimeS
+      if sleepytime > 0:
+        time.sleep(sleepytime+0.01)
       #_sleepms(40)
       #cv2.imshow("x", cropImg)
-      ledSerial[i].write(ledData)
+      try:
+        ledSerial[i].write(ledData)
+      except:
+        print("write error")
     #if cv2.waitKey(1) & 0xFF == ord('q'):
       #break
   mov.release()

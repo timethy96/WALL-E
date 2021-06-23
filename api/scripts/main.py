@@ -11,7 +11,8 @@ from pydantic import BaseModel
 
 from starlette.requests import Request
 
-import concurrent.futures, os, math, time, aiofiles, sys, json
+import concurrent.futures, os, math, aiofiles, sys, json
+from time import time, time_ns
 
 
 cwd = os.path.dirname(os.path.realpath(__file__))
@@ -32,15 +33,12 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    #allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-class data(BaseModel):
-    aqi: Optional[int] = None
-    img: Optional[str] = None
 
 @app.get("/", response_class=HTMLResponse)
 @limiter.exempt
@@ -50,13 +48,14 @@ def read_root():
 
 @app.post("/")
 @limiter.limit("30/minute")
-async def upload_post(in_file: UploadFile=File(...), length: str=Form(...), recurring: str=Form(...), time: str=Form(...), request: Request=Request):
+async def upload_post(in_file: UploadFile=File(...), length: Optional[str]=Form(None), recurring: Optional[str]=Form(None), time: Optional[str]=Form(None), request: Request=Request):
     if os.path.isfile(cwd + "/qMovies/" + in_file.filename):
         fName = in_file.filename.split(".")[0:-1]
         fExt = in_file.filename.split(".")[-1]
-        out_file_path = cwd + "/qMovies/" + fName + str(time.time_ns()) + fExt
+        #print(cwd, "/qMovies/", fName, str(time_ns()), fExt)
+        out_file_path = cwd + "/qMovies/" + fName[0] + str(time_ns()) + fExt
     else:
-        out_file_path = cwd + "/qMovies/" + in_file.filenames
+        out_file_path = cwd + "/qMovies/" + in_file.filename
     async with aiofiles.open(out_file_path, 'wb') as out_file:
         while content := await in_file.read(1024):
             await out_file.write(content)  # async write chunk
@@ -73,7 +72,7 @@ async def upload_post(in_file: UploadFile=File(...), length: str=Form(...), recu
 
 @app.get("/queue/")
 @limiter.limit("30/minute")
-async def get_queue():
-    return json.dumps(queueWorker.getQueueInfo())
+async def get_queue(request: Request=Request):
+    return queueWorker.getQueueInfo()
 
 
