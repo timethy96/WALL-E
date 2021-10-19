@@ -1,0 +1,19 @@
+FROM balenalib/%%RESIN_MACHINE_NAME%%-python:latest-stretch-build
+
+#switch on systemd init system in container
+ENV INITSYSTEM on
+ENV UDEV=on
+
+RUN apt-get update
+RUN apt-get install default-jre xvfb libxrender1 libxtst6 libxi6 libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libgstreamer-plugins-bad1.0-dev gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav gstreamer1.0-doc gstreamer1.0-tools gstreamer1.0-x gstreamer1.0-alsa gstreamer1.0-pulseaudio
+
+COPY ./requirements.txt /requirements.txt
+RUN pip install -r /requirements.txt
+
+COPY ./scripts /app
+
+#RUN Xvfb :0 -screen 0 640x480x16 &
+ENV DISPLAY=:0
+ENV ports /dev/ttyACM0,/dev/ttyACM1
+
+CMD Xvfb :0 -screen 0 640x480x16 & uvicorn app.main:app --host 0.0.0.0 --port 80

@@ -1,0 +1,9 @@
+numpy
+pyserial
+opencv-python-headless
+fastapi
+uvicorn
+slowapi
+aiofiles
+python-multipart
+RPi.GPIO

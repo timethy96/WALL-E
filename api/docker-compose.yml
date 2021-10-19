@@ -1,4 +1,9 @@
 version: '2'
+
+volumes:
+    qMovies:
+    movDB:
+
   
 services:
   
@@ -7,6 +12,9 @@ services:
         privileged: true
         ports:
             - 80:80
+        volumes:
+            - 'qMovies:/app/qMovies'
+            - 'movDB:/app/movDB'
         environment:
             GUNICORN_CMD_ARGS: --reload
         restart: unless-stopped

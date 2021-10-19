@@ -112,9 +112,10 @@ form {
 
 #queueDiv {
     text-align: left;
-    width: 90%;
-    margin: 50px 0 0 10%;
-    overflow-y: scroll;
+    width: 80%;
+    margin: 50px 0 30px 10%;
+    overflow-x: auto;
+    overflow-y:hidden;
     display: flex;
     flex-wrap: nowrap;
     flex-direction: row;
@@ -127,4 +128,52 @@ form {
     flex-direction: column;
     flex-wrap: nowrap;
     word-break: break-all;
+    border: solid 2px #000;
+    border-radius: 0;
+    margin: 0 20px 0 0;
+    padding: 10px;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.movThumb {
+    display: block;
+    margin: 0 auto;
+    width: 120px;
+    height: auto;
+}
+
+.delMov {
+    position: absolute !important;
+    right:10px;
+    bottom:0px;
+    font-size: 28px !important;
+    background: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    color: #000 !important;
+    min-width: 0 !important;
+    cursor: pointer;
+}
+
+.headerForm {
+    display: inline-block;
+    font-size: 28px !important;
+    background: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    color: #000 !important;
+    min-width: 0 !important;
+    cursor: pointer;
+    z-index: 9;
+    position: relative;
+}
+
+header {
+    position: absolute !important;
+    right:10px;
+    top:10px;
+    
 }

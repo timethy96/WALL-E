@@ -1,0 +1,29 @@
+version: '2'
+
+volumes:
+    qMovies:
+    movDB:
+
+  
+services:
+  
+    wall-e_api:
+        build: ./api
+        privileged: true
+        volumes:
+            - 'qMovies:/app/qMovies'
+            - 'movDB:/app/movDB'
+        environment:
+            - GUNICORN_CMD_ARGS=--reload
+            - password=hallo_wall-e
+            - BASEURLS=https://ac6fe026fa8d0b9d8afea0ebaed5a778.balena-devices.com/
+        restart: unless-stopped
+
+    wall-e_ui:
+        build: ./interface
+        ports:
+            - 80:80
+        environment:
+            - APIURL=/api
+            - password=hallo_wall-e
+        restart: unless-stopped

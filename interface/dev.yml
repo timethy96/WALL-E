@@ -1,7 +1,7 @@
 version: '3'
   
 services:  
-    swzpln:
+    wall-e_ui:
         container_name: wall-e_ui
         image: php:apache
         ports:
@@ -9,5 +9,6 @@ services:
         volumes:
             - ./html:/var/www/html
         environment:
-            - APIURL=https://8b30755028eb3126a5ec52785b2826b4.balena-devices.com
+            - APIURL=https://ac6fe026fa8d0b9d8afea0ebaed5a778.balena-devices.com/api
+            - password=hallo_wall-e
         restart: "no"

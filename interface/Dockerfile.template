@@ -1,0 +1,6 @@
+FROM php:apache
+
+RUN a2enmod proxy proxy_http ssl
+COPY proxy-api.conf /etc/apache2/sites-enabled/000-default.conf
+
+COPY ./html /var/www/html

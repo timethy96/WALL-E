@@ -28,7 +28,69 @@ $(".ulForm").submit(function(e) {
             $(".loading").hide();
             $(".responseText").html(data.Result);
             $(".responseText").css("color","darkgreen");
-            //alert(JSON.stringify(data)); // show response from the php script.
+            updateQueue();
+        },
+        cache: false,
+        contentType: false,
+        processData: false
+    });
+
+    
+});
+
+function updateQueue()
+{ 
+    $( "#queueDiv" ).load(" #queueDiv > *" );
+}
+
+$(document).ready(function(){
+    setInterval(function(){
+          updateQueue();
+    },10000);
+});
+
+
+$(document).on('click', '.delMov', function(e) {
+
+    $(this).html("&#x23F3;");
+
+    var formData = new FormData(this.parentNode);
+    var url = $(this).parent().attr('action');
+    
+    $.ajax({
+        type: "POST",
+        url: url,
+        data: formData,
+        success: function(data) {
+            updateQueue();
+        },
+        cache: false,
+        contentType: false,
+        processData: false
+    });
+
+    
+});
+
+$(document).on('click', '.headerForm', function(e) {
+
+    $(this).children('span').html("&#x23F3;");
+    const clickedForm = this;
+
+    var formData = new FormData(this);
+    var url = $(this).attr('action');
+    
+    $.ajax({
+        type: "POST",
+        url: url,
+        data: formData,
+        success: function(data) {
+            alert(data.success);
+            $(clickedForm).children('span').html("&#x1F50C;");
+        },
+        error: function(data) {
+            alert(JSON.stringify(data));
+            $(clickedForm).children('span').html("&#x1F50C;");
         },
         cache: false,
         contentType: false,
