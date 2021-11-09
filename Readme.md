@@ -1,30 +1,12 @@
-Wall-E LED-Fassade
-
-Dokumentation
-
-
-
-
-
-Layout:
-
-Größe: 12
-
-Schriftart: ?
-
-Anordnung: 2 Spalten vs gesamte Seite?
-
-
-
-
-
-
-
-
-
 # Inhaltsverzeichnis
 
+
+
+
+
 [TOC]
+
+
 
 
 
@@ -62,33 +44,17 @@ Anordnung: 2 Spalten vs gesamte Seite?
 
 # 2 Hardware
 
-
-
 ## 2.1 Stromversorgung
-
-
 
 ### 2.1.1 Relais-Netzteil
 
-
-
-(schema)
-
-
-
-Über das Relais wird die Phase des Stromanschlusses verzögert an die Netzteile geleitet und startet diese nacheinander. Dadurch wird die auf einmal auftretende Strombedarfs-Spitze geglättet.
+![img](https://lh4.googleusercontent.com/hmO1Aso4R9J6UwY6ocMb_xBabUQ7OHdV8xS_04T-KhUgXZS0XQbydubJco_wPyhZYbKMAOiI_yLZz6SNXSU8Cj_qkdkMwxdR81HLliwT5HzGxIrnJVKGonSXdyNsilc_EV1V37k_)Über das Relais wird die Phase des Stromanschlusses verzögert an die Netzteile geleitet und startet diese nacheinander. Dadurch wird die auf einmal auftretende Strombedarfs-Spitze geglättet.
 
 Die Null-Phase wie die Erdung wird direkt an die Netzteile angeschlossen.
 
-
-
 ### 2.1.2 Netzteil LED-Streifen
 
-
-
-(schema)
-
-
+![img](https://lh4.googleusercontent.com/hmO1Aso4R9J6UwY6ocMb_xBabUQ7OHdV8xS_04T-KhUgXZS0XQbydubJco_wPyhZYbKMAOiI_yLZz6SNXSU8Cj_qkdkMwxdR81HLliwT5HzGxIrnJVKGonSXdyNsilc_EV1V37k_)
 
 Aus jedem der 12 Netzteile, werden vier Kabel (zwei Paare bestehend aus Plus- und Minuspolung) zur Stromversorgung abgeführt. Diese werden in einer Schraubverteilungsschiene auf jeweils acht LED-Streifen aufgeteilt.
 
@@ -114,7 +80,7 @@ Alle Anschlüsse werden durch Schraub-Klemm verbindungen gebildet.
 
 
 
-?
+Die Stromzufuhr für den Raspberry Pi erfolgt gesondert. Dadurch kann dieser immer an bleiben und über seine GPIO Pins die bereits erwähnten Relais schalten.
 
 
 
@@ -123,6 +89,8 @@ Alle Anschlüsse werden durch Schraub-Klemm verbindungen gebildet.
 
 
 (Schema)
+
+![img](https://lh4.googleusercontent.com/0axk4GieoA4J7XJdmdlkXIRMR-CZfsgF7c2TKuhGNn3nY2wpJqgHXJV148RHZl_QcMvyFP6bAaNin0NtUNNydEl8SiCVtNMcW1YkGNuFMRdB_ymFUyOk_7m_LB69nmPz0PbTOxTL)
 
 
 
@@ -136,7 +104,7 @@ Die beiden Mikrocontroller werden an einem der Netzteile angeschlossen. Zusätzl
 
 
 
-(Schema)
+![img](https://lh4.googleusercontent.com/0axk4GieoA4J7XJdmdlkXIRMR-CZfsgF7c2TKuhGNn3nY2wpJqgHXJV148RHZl_QcMvyFP6bAaNin0NtUNNydEl8SiCVtNMcW1YkGNuFMRdB_ymFUyOk_7m_LB69nmPz0PbTOxTL)
 
 
 
@@ -152,19 +120,11 @@ Jeder der Teensies besitzt acht Channels, die über ein PWM-Signal die Farbcodie
 
 
 
-(Schema)
-
-
-
 Um die Daten der beiden Teensy aufeinander abzustimmen, werden diese über den synchronisations Pin verbunden.
 
 
 
 ### 2.2.3 Teensy zu Raspberry Pi
-
-
-
-(Schema)
 
 
 
@@ -176,7 +136,7 @@ Die Daten des Raspberry Pi werden über eine Serielle USB Schnittstelle weiterge
 
 
 
-(Schema)
+![img](https://lh4.googleusercontent.com/0axk4GieoA4J7XJdmdlkXIRMR-CZfsgF7c2TKuhGNn3nY2wpJqgHXJV148RHZl_QcMvyFP6bAaNin0NtUNNydEl8SiCVtNMcW1YkGNuFMRdB_ymFUyOk_7m_LB69nmPz0PbTOxTL)
 
 
 
@@ -192,9 +152,186 @@ Die dazu verwendeten Pins sind:
 
 # 3 Software
 
+Die Software besteht aus drei Hauptbestandteilen: Der Code auf den Mikrocontrollern, der die LEDs ansteuert, die API, die die Videos verwaltet und in das LED-Format konvertiert und ein unabhängiges Webinterface, das die Anfragen an die API stellt. Der Einfachheit geschuldet wird das Webinterface und die API auf dem Raspberry zusammen in respektiven Containern ausgeführt. Die API wird auf den Unterordner “/api” geproxied.
+
+
+
+Teensy4 Microcontoller <--> FastAPI + Movie2Serial <--> Webinterface 
+
 ## 3.1 Teensy4: DisplayVideo
 
-## 3.2 Raspberry Pi 4: FastAPI
+Das VideoDisplay-Programm des Mikrocontrollers basiert auf dem Code von PaulStoffgren (https://github.com/PaulStoffregen/OctoWS2811/blob/master/examples/VideoDisplay_Teensy4/VideoDisplay_Teensy4.ino). Hier wurde von uns der Code hinsichtlich der Kompatibilität mit dem Teensy4 verbessert (Pull-Request pending).
+
+Das Programm erhält den Teil des aktuellen Frame des Videos per SerialUSB Verbindung und schickt PWM Signale an den jeweiligen Channel der LED-Streifen. Desweiteren gibt es einen Main, der per Sync-Signal die Framerate des anderen Controllers, der Agent, steuert.
+
+Die Rolle der jeweiligen Controller wird über ein Signal vom Raspberry PI festgelegt.
+
+## 3.2 Raspberry Pi 4: API
+
+Der wohl Komplexeste Teil der Programmierung ist die API. Sie kümmert sich um die Verwaltung der Film- und Bilddateien, bestimmt die Reihenfolge der Anzeige und konvertiert die Filme und Bilder in das für den Teensy verständliche serielle Format um.
+
+Für diese Aufgaben sind mehrere Subprozesse verantwortlich:
+
+FastAPI Request Handler <--> Queue Worker Thread <--> movie2serial Konvertierung
+
+Die API ist in einer Kombination von Python 3 und Processing Java 3 geschrieben und setzt verschiedene Programme und Libraries voraus (siehe *3.2.4 Docker Container*).
+
+### 3.2.1 FastAPI Request Handler (main.py)
+
+Die Hauptfunktionen der API werden über FastAPI URLs gesteuert. Vor dem Starten von FastAPI werden via GPIO die Relais, mit kurzer Verzögerung, nach und nach eingeschaltet. Danach wird der queueWorker.py importiert und damit der WorkerThread gestartet, der die Queue asynchron zur API abarbeitet.
+
+Jede Ausführung der Funktionen ist zeitlich begrenzt (ca. 30 pro Minute), um eine Überbelastung der API zu vermeiden.
+
+#### FastAPI URLs:
+
+##### /upload/
+
+Über diese Funktion werden POST-Request verarbeitet, die einen Datei-Upload starten.
+
+Inputs:
+
+- in_file: Datei als Bytestream
+- length: Anzeigedauer für Bilder als integer (optional//nur für Bilder relevant)
+- recurring: Wenn Datei täglich angezeigt werden soll als Boolean (optional)
+- time: Uhrzeit der Anzeige als Time (optional)
+- password: Login-Passwort aus der Umgebungsvariable
+
+##### /queue/
+
+Diese Funktion gibt Informationen über die aktuelle Queue als json zurück.
+
+##### /delQueue/
+
+Diese Funktion löscht die angegebene Datei aus der Queue.
+
+Inputs:
+
+- movName: Name der zu löschenden Datei
+- password: Login-Passwort aus der Umgebungsvariable
+
+##### /backup/
+
+Diese Funktion gibt eine ZIP-Datei zurück, die alle hochgeladenen Dateien enthält. Um Speicherplatz zu sparen, werden auch alle Dateien gelöscht, die nicht mehr in Benutzung sind.
+
+Inputs:
+
+- password: Login-Passwort aus der Umgebungsvariable
+
+##### /power/
+
+Diese Funktion stoppt/startet den aktuellen workerThread und schaltet alle Relais aus bzw. ein.
+
+Inputs:
+
+- password: Login-Passwort aus der Umgebungsvariable
+
+### 3.2.2 Queue Worker Thread (queueWorker.py)
+
+Neben des Haupthreads, der die Queue nach und nach abarbeitet und jedes Video der Reihe nach vom movie2serial-Programm abspielen lässt, befinden sich in dieser Python-Datei auch Funktionen, die die Basis der Interaktion von der API mit der Queue bilden.
+
+#### Funktionen:
+
+##### class MovieObj
+
+Konstruiert ein Objekt mit allen nötigen Informationen über ein Medium, das abgespielt werden soll.
+
+Eigenschaften:
+
+- .filePath: absoluter Pfad zur Mediendatei als String
+- .dTime: Zeit der Anzeige als Unix-Timestamp (optional, default = aktuelle Zeit)
+- .imgLength: Länge der Anzeige bei Bildern als Integer (optional, default = None, nur applikabel bei Bildern)
+- .recurrent: Ob das Medium täglich angezeigt werden soll als Boolean (optional, default = False)
+
+Funktionen:
+
+- getDict(): gibt das Objekt als Dictionnary zurück
+
+##### stopWorker()
+
+Setzt die globale Variable is_running auf False und wartet (time blocking) bis die aktuelle Iteration des workerThreads abgelaufen ist.
+
+##### startWorker()
+
+Erstellt und startet einen neuen workerThread.
+
+##### putQueue(movPath, length=None)
+
+Setzt ein Medium zur nächstmöglichen Ausführung in die Queue.
+
+Inputs:
+
+- movPath: absoluter Pfad zur Mediendatei als String
+- length: Länge der Anzeige bei Bildern als Integer (optional, nur applikabel bei Bildern)
+
+##### putDB(filePath, dTime, imgLength, recurrent)
+
+Erstellt einen Datenbankeintrag zur späteren oder wiederholten Ausführung eines Mediums.
+
+Inputs:
+
+- filePath: absoluter Pfad zur Mediendatei als String
+- dTime: Zeitpunkt der nächsten Ausführung
+- imgLength: Länge der Anzeige eines Bildes (optional, nur applikabel bei Bildern)
+- recurrent: Ob das Medium täglich angezeigt werden soll als Boolean (optional, default = False)
+
+##### getQueueInfo()
+
+Gibt Informationen über Medien in der aktuellen Queue und der Datenbank als *movieObj*-s zurück.
+
+##### delDB(filepath)
+
+Löscht die angegebene Datei aus der Datenbank.
+
+Inputs:
+
+- filepath: absoluter Pfad zur Mediendatei als String
+
+##### cleanFiles()
+
+Löscht alle Dateien, die sich weder in der Queue, noch in der Datenbank befinden.
+
+##### _randomMovie()
+
+Gibt ein MovieObj aus dem Ordner stdMovies zurück. Dies dient als Lückenfüller, wenn keine Medien in der Queue sind.
+
+##### _workQueue(mQueue)
+
+Haupt-Worker-Thread. In dieser Funktion wird die gegebene Queue abgearbeitet und angezeigt. Ist die Queue leer, wird ein zufälliges Video aus dem stdMovies-Ordner gezeigt. Die worker-loop wird beendet, indem die globale Variable is_running auf False gesetzt wird.
+
+Die Funktionsweise des Threads wird im folgenden Diagramm verdeutlicht:
+
+![img](https://lh6.googleusercontent.com/5dph6vrYPkwz_HMgra9-FRAEBaVfBZ1Dbbu-sSVh3Tc9TFQzZQp2221DmgmRQRuKyqpQp-TLdq8ylb45JNWYFSXuEkeYv3ouqcNTBtdQpfalSe92j38YvwOn3VVNRsvY9fJFK9ju)
+
+### 3.2.3 movie2serial (Java/Processing)
+
+Dieses Programm wandelt eine Mediendatei in das Serielle Format um und überträgt es an die Teensies. 
+
+Der Quellcode des movie2serial-Programms basiert auf dem Code von PaulStoffgren (https://github.com/PaulStoffregen/OctoWS2811/blob/master/extras/VideoDisplay/Processing/movie2serial.pde).
+
+Das Programm wurde grundlegend modifiziert, um erstens auch Bilder konvertieren zu können und zweitens einen Aufruf aus dem Python-Programm, mit Übergabe der notwendigen Informationen, zu ermöglichen.
+
+Der Versuch das Processing-Programm in Python umzuschreiben ist an der geringen Geschwindigkeit der pySerial-Library gescheitert.
+
+
+
+Das auf ARM64 kompilierte movie2serial Java Programm wird aus dem Python Script als subprocess aufgerufen. Dabei werden folgende Befehl-Arguments angehängt:
+
+- $1: absoluter Pfad zur Mediendatei als String
+- $2: zuvor in Python berechnete Framerate des Videos als Float (nicht möglich in Processing)
+- $3: der Pfad der Serial Ports aus der Umgebungsvariable als String (kommagetrennt)
+- $4: (optional, nur bei Bildern) Länge der Anzeige des Bildes als Integer
+
+Der subprocess Befehl mit den jeweiligen Variablen lautet:
+
+  “[pfad-zu]/movie2serial $1 $2 $3 $4”
+
+
+
+Das Programm fragt zunächst die Anzeigedaten von den Teensies ab, um so das Bild gegebenenfalls in das jeweilige Format zu beschneiden
+
+
+
+### 3.2.4 Docker Container (balena)
 
 ## 3.3 Webinterface
 
@@ -485,4 +622,3 @@ double percentageFloat(int percent) {
   return (double)percent / 100.0;
 }
 ```
-

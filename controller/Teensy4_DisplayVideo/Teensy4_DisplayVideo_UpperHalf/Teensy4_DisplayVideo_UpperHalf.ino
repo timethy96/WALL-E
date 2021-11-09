@@ -95,10 +95,11 @@ https://github.com/PaulStoffregen/OctoWS2811/tree/master/extras
 */
 
 const int numPins = 8;
-//byte pinList[numPins] = {2, 14, 7, 8, 6, 20, 21, 5}; //Standard config
+byte pinList[numPins] = {2, 14, 7, 8, 6, 20, 21, 5}; //Standard config
 //byte pinList[numPins] = {5, 21, 20, 6, 8, 7, 14, 2}; //config reverse
 //byte pinList[numPins] = {5, 21, 20, 6, 14, 2, 8, 7};
-byte pinList[numPins] = {2, 14, 7, 8, 6, 21, 5, 20};
+//byte pinList[numPins] = {2, 7, 8, 14, 20, 6, 21, 5};
+//blub
 
 const int ledsPerStrip = LED_WIDTH * LED_HEIGHT / 8;
 
